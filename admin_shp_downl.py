@@ -1,4 +1,6 @@
-import geopandas as gpd
+# First Code to RUN
+# This python code downloads the administrative boundaries for Austria country for all levels from GADM
+
 import os
 import urllib.request
 import zipfile
@@ -16,10 +18,3 @@ if not os.path.exists(zip_path):
 if not os.path.exists(extract_dir):
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         zip_ref.extractall(extract_dir)
-
-# Shapefile reading
-gdf = gpd.read_file(os.path.join(extract_dir, "gadm41_AUT_2.shp"))
-
-# Plot
-gdf.plot(edgecolor="black", cmap="Pastel1")
-

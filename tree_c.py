@@ -1,3 +1,6 @@
+# Third Code to RUN 
+# This Python codes runs the analysis, still needs some refinements !! UNDER DEVELOPMENT!!
+
 import rasterio
 import numpy as np
 import matplotlib.pyplot as plt
