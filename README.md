@@ -1,4 +1,4 @@
-#Tree Cover Changes detection in Salzburg region
+#H Tree Cover Changes detection in Salzburg region
 
 This app uses freely available data from ESRI Land Cover Explorer to examine changes in forest cover in the Salzburg region of Austria from 2018 to 2024.
 
