@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salzburg Tree Cover Change Detection</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    
+    <!-- Chart.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <div class="header">
+        <h1>🌲 Salzburg Tree Cover Change Detection</h1>
+        <p>Interactive analysis of forest cover changes (2018-2024) using Sentinel-2 data</p>
+    </div>
+
+    <div class="container">
+        <div id="map"></div>
+        
+        <div class="sidebar">
+            <div class="info-panel">
+                <h3>📊 Project Overview</h3>
+                <p>This WebGIS application analyzes tree cover changes across Salzburg's administrative regions between 2018 and 2024 using Sentinel-2 satellite imagery.</p>
+                <p><strong>Click on any region</strong> to view detailed change statistics and trends.</p>
+            </div>
+
+            <div class="legend">
+                <h4>🎨 Tree Cover Loss Legend</h4>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #27ae60;"></div>
+                    <span>Minimal Loss (0-2%)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #f39c12;"></div>
+                    <span>Moderate Loss (2-5%)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #e74c3c;"></div>
+                    <span>High Loss (5%+)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #8e44ad;"></div>
+                    <span>Severe Loss (8%+)</span>
+                </div>
+            </div>
+
+            <div class="info-panel">
+                <h3>🔬 Methodology</h3>
+                <p><strong>Data Source:</strong> Esri Sentinel-2 Land Cover Explorer</p>
+                <p><strong>Analysis Period:</strong> 2018-2024</p>
+                <p><strong>Resolution:</strong> 10m pixel resolution</p>
+                <p><strong>Change Detection:</strong> Pixel-based classification comparison</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+    <script>
+ fetch('salzburg_AUT2.geojson')
+    .then(response => {
+      if (!response.ok) throw new Error("HTTP error " + response.status);
+      return response.json();
+    })
+    .then(data => {
+      L.geoJSON(data, {
+        style: {
+          color: "#3388ff",
+          weight: 2,
+          fillColor: "#3388ff",
+          fillOpacity: 0.4
+        },
+        onEachFeature: function (feature, layer) {
+          const name = feature.properties.NAME_2 || "Ismeretlen";
+          layer.bindPopup(`<strong>${name}</strong>`);
+        }
+      }).addTo(map);
+    })
+    .catch(error => {
+      console.error("Hiba a GeoJSON betöltésénél:", error);
+    });
+
+        // Initialize map centered on Salzburg
+        const map = L.map('map').setView([47.5, 13.2], 9);
+
+        const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+         });
+
+        const esriSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri'
+        });
+
+         
+        // Alapértelmezett réteg hozzáadása
+        osm.addTo(map);
+
+        // Layer control a basemap-ekhez
+        const baseMaps = {
+            "OpenStreetMap": osm,
+            "Esri Satellite": esriSat
+        };
+
+        L.control.layers(baseMaps).addTo(map);
+
+        // Function to determine color based on tree loss percentage
+        function getColor(totalLoss) {
+            return totalLoss > 8 ? '#8e44ad' :
+                   totalLoss > 5 ? '#e74c3c' :
+                   totalLoss > 2 ? '#f39c12' :
+                                   '#27ae60';
+        }
+
+        // Function to calculate total tree loss percentage
+        function calculateTotalLoss(properties) {
+            const initial = properties.forestArea2018;
+            const final = properties.forestArea2024;
+            return ((initial - final) / initial * 100).toFixed(1);
+        }
+
+        // Style function for regions
+        function style(feature) {
+            const totalLoss = calculateTotalLoss(feature.properties);
+            return {
+                fillColor: getColor(totalLoss),
+                weight: 2,
+                opacity: 1,
+                color: 'white',
+                dashArray: '3',
+                fillOpacity: 0.7
+            };
+        }
+
+        // Create popup content with chart
+        function createPopupContent(feature) {
+            const props = feature.properties;
+            const totalLoss = calculateTotalLoss(props);
+            
+            const popupContent = `
+                <div class="popup-content">
+                    <div class="popup-title">${props.name}</div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value">${totalLoss}%</div>
+                            <div class="stat-label">Total Loss</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${props.totalArea}</div>
+                            <div class="stat-label">Total Area (km²)</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${props.forestArea2018}</div>
+                            <div class="stat-label">Forest 2018 (km²)</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${props.forestArea2024}</div>
+                            <div class="stat-label">Forest 2024 (km²)</div>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <canvas id="chart-${props.name.replace(/\s+/g, '')}" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            `;
+            
+            return popupContent;
+        }
+
+        // Create chart after popup opens
+        function createChart(feature) {
+            const props = feature.properties;
+            const chartId = `chart-${props.name.replace(/\s+/g, '')}`;
+            
+            setTimeout(() => {
+                const ctx = document.getElementById(chartId);
+                if (ctx) {
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: ['2018', '2019', '2020', '2021', '2022', '2023', '2024'],
+                            datasets: [{
+                                label: 'Annual Tree Loss (%)',
+                                data: [
+                                    props.treeLoss2018,
+                                    props.treeLoss2019,
+                                    props.treeLoss2020,
+                                    props.treeLoss2021,
+                                    props.treeLoss2022,
+                                    props.treeLoss2023,
+                                    props.treeLoss2024
+                                ],
+                                borderColor: '#e74c3c',
+                                backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                                borderWidth: 3,
+                                fill: true,
+                                tension: 0.4,
+                                pointBackgroundColor: '#e74c3c',
+                                pointBorderColor: '#ffffff',
+                                pointBorderWidth: 2,
+                                pointRadius: 5
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    max: 10,
+                                    grid: {
+                                        color: 'rgba(0,0,0,0.1)'
+                                    },
+                                    ticks: {
+                                        callback: function(value) {
+                                            return value + '%';
+                                        }
+                                    }
+                                },
+                                x: {
+                                    grid: {
+                                        color: 'rgba(0,0,0,0.1)'
+                                    }
+                                }
+                            },
+                            elements: {
+                                point: {
+                                    hoverRadius: 8
+                                }
+                            }
+                        }
+                    });
+                }
+            }, 100);
+        }
+
+        // Event handlers for interactive features
+        function highlightFeature(e) {
+            var layer = e.target;
+
+            layer.setStyle({
+                weight: 4,
+                color: '#2c3e50',
+                dashArray: '',
+                fillOpacity: 0.9
+            });
+
+            if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+                layer.bringToFront();
+            }
+        }
+
+        function resetHighlight(e) {
+            geojsonLayer.resetStyle(e.target);
+        }
+
+        function zoomToFeature(e) {
+            map.fitBounds(e.target.getBounds());
+        }
+
+        function onEachFeature(feature, layer) {
+            layer.on({
+                mouseover: highlightFeature,
+                mouseout: resetHighlight,
+                click: function(e) {
+                    const popupContent = createPopupContent(feature);
+                    layer.bindPopup(popupContent, {
+                        maxWidth: 450,
+                        className: 'custom-popup'
+                    }).openPopup();
+                    
+                    createChart(feature);
+                }
+            });
+        }
+
+        // Add GeoJSON layer to map
+        const geojsonLayer = L.geoJSON(salzbergRegions, {
+            style: style,
+            onEachFeature: onEachFeature
+        }).addTo(map);
+
+        // Fit map to show all regions
+        map.fitBounds(geojsonLayer.getBounds());
+
+        // Add a subtle animation on load
+        setTimeout(() => {
+            document.querySelector('.container').style.opacity = '1';
+            document.querySelector('.container').style.transform = 'translateY(0)';
+        }, 300);
+
+        // Initialize container animation
+        document.querySelector('.container').style.opacity = '0';
+        document.querySelector('.container').style.transform = 'translateY(20px)';
+        document.querySelector('.container').style.transition = 'all 0.6s ease';
+    </script>
+</body>
+</html>
