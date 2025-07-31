@@ -1,5 +1,5 @@
-# First Code to RUN
-# This python code downloads the administrative boundaries for Austria country for all levels from GADM
+# First Code to run
+# This script downloads the administrative boundaries for Austria at level 2 from GADM
 
 import os
 import urllib.request
